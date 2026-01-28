@@ -1,0 +1,15 @@
+###
+POST http://localhost:3001/api/blogs/ HTTP/1.1
+content-type: application/json
+
+{
+  "title": "Torge ist bad",
+  "author": "Torge Schöwing",
+  "url": "www.torge-schoewing.de/bad",
+  "like": 20
+}
+
+###
+
+GET http://localhost:3001/api/blogs/
+
