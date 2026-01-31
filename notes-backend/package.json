@@ -2,11 +2,11 @@
   "name": "backend",
   "version": "0.0.1",
   "description": "",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "node --watch app.js",
-    "test": "node --test",
+    "start": "cross-env NODE_ENV=production node index.js",
+    "dev": "cross-env NODE_ENV=development node --watch index.js",
+    "test": "cross-env NODE_ENV=test node --test",
     "build:ui": "rm -rf dist && cd ../notes && npm run build && cp -r dist ../notes-backend",
     "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push",
     "lint": "eslint ."
@@ -14,6 +14,7 @@
   "author": "Torge Schöwing",
   "license": "MIT",
   "dependencies": {
+    "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "mongoose": "^9.1.5"
@@ -22,7 +23,8 @@
     "@eslint/js": "^9.39.2",
     "@stylistic/eslint-plugin": "^5.7.1",
     "eslint": "^9.39.2",
-    "globals": "^17.2.0"
+    "globals": "^17.2.0",
+    "supertest": "^7.2.2"
   },
   "eslintConfig": {
     "extends": "eslint.config.mjs"

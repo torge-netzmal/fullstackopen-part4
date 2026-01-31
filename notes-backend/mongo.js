@@ -1,38 +1,29 @@
+require('dotenv').config({ override: true })
 const mongoose = require('mongoose')
+const logger = require('./utils/logger')
+const Note = require('./models/note')
 
-if (process.argv.length < 3) {
-    console.log('give password as argument')
-    process.exit(1)
-}
 
-const password = process.argv[2];
+mongoose
+  .connect(process.env.TEST_MONGODB_URI, { family: 4 })
+  .then(() => {
+    logger.info('connected to MongoDB')
+  })
+  .catch((error) => {
+    logger.error('error connection to MongoDB:', error.message)
+  })
 
-const url = `mongodb+srv://fullstack:${password}@cluster0.bcjbxbh.mongodb.net/noteApp?retryWrites=true&w=majority&appName=Cluster0`
-
-mongoose.set('strictQuery', false)
-
-mongoose.connect(url, {family: 4})
-
-const noteSchema = new mongoose.Schema({
-    content: String,
-    important: Boolean,
-})
-
-const Note = mongoose.model('Note', noteSchema)
-
-/*const note = new Note({
+const initialNotes = [
+  {
     content: 'HTML is easy',
+    important: false,
+  },
+  {
+    content: 'Browser can execute only JavaScript',
     important: true,
-})
+  },
+]
 
-note.save().then(result => {
-    console.log('note saved!')
-    mongoose.connection.close()
-})*/
-
-Note.find({important: true}).then(result => {
-    result.forEach(note => {
-        console.log(note)
-    })
-    mongoose.connection.close()
+initialNotes.forEach(note => {
+  new Note(note).save()
 })
