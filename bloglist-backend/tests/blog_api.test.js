@@ -22,6 +22,16 @@ test('all blogs are returned and being in JSON format', async () => {
   assert.strictEqual(response.body.length, helper.initialBlogs.length)
 })
 
+test('returned blogs have id and not _id as identifier', async () => {
+  const response = await api.get('/api/blogs')
+
+  const firstBlog = response.body[0]
+  console.log(firstBlog, 'id' in firstBlog, '_id' in firstBlog)
+
+  assert('id' in firstBlog)
+  assert(!('_id' in firstBlog))
+})
+
 after(async () => {
   await mongoose.connection.close()
 })
