@@ -32,6 +32,37 @@ test('returned blogs have id and not _id as identifier', async () => {
   assert(!('_id' in firstBlog))
 })
 
+test('returned blogs have id and not _id as identifier', async () => {
+  const response = await api.get('/api/blogs')
+
+  const firstBlog = response.body[0]
+  console.log(firstBlog, 'id' in firstBlog, '_id' in firstBlog)
+
+  assert('id' in firstBlog)
+  assert(!('_id' in firstBlog))
+})
+
+test('a valid blog can be added ', async () => {
+  const newBlog = {
+    title: 'async/await simplifies making async calls',
+    url: 'ts.netzmal.de/blogs/async',
+    author: 'Torge Schöwing',
+    likes: 69
+  }
+
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(201)
+    .expect('Content-Type', /application\/json/)
+
+  const blogsAtEnd = await helper.blogsInDb()
+  assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length + 1)
+
+  const titles = blogsAtEnd.map(n => n.title)
+  assert(titles.includes('async/await simplifies making async calls'))
+})
+
 after(async () => {
   await mongoose.connection.close()
 })
