@@ -63,6 +63,24 @@ test('a valid blog can be added ', async () => {
   assert(titles.includes('async/await simplifies making async calls'))
 })
 
+test('missing likes default to 0 ', async () => {
+  const newBlog = {
+    title: 'async/await simplifies making async calls',
+    url: 'ts.netzmal.de/blogs/async',
+    author: 'Torge Schöwing',
+  }
+
+  const result = await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(201)
+    .expect('Content-Type', /application\/json/)
+
+  const blogsAtEnd = await helper.blogsInDb()
+  assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length + 1)
+  assert.strictEqual(result.body.likes, 0)
+})
+
 after(async () => {
   await mongoose.connection.close()
 })
