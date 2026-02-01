@@ -81,6 +81,30 @@ test('missing likes default to 0 ', async () => {
   assert.strictEqual(result.body.likes, 0)
 })
 
+test('missing title returns 400 ', async () => {
+  const newBlog = {
+    url: 'ts.netzmal.de/blogs/async',
+    author: 'Torge Schöwing',
+  }
+
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(400)
+})
+
+test('missing url returns 400 ', async () => {
+  const newBlog = {
+    title: 'async/await simplifies making async calls',
+    author: 'Torge Schöwing',
+  }
+
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(400)
+})
+
 after(async () => {
   await mongoose.connection.close()
 })
