@@ -1,0 +1,21 @@
+GET http://localhost:3001/api/users/
+
+###
+
+POST http://localhost:3001/api/notes/ HTTP/1.1
+content-type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InRvcmNoIiwiaWQiOiI2OTdmYjc0MzhkODEyMzZkZjE0NWEzZjYiLCJpYXQiOjE3Njk5ODM4MjN9.irrAfpydvf5dcp1ROuhfEKczOLDK-TdnYHAMsCqsjQg
+
+{
+  "content": "Torge ist ein User der Token nutzt",
+  "userId": "697fb7438d81236df145a3f6"
+}
+
+###
+POST localhost:3001/api/login/ HTTP/1.1
+content-type: application/json
+
+{
+  "username": "torch",
+  "password": "123321"
+}

@@ -14,12 +14,14 @@
   "author": "Torge Schöwing",
   "license": "MIT",
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "lodash": "^4.17.23",
     "mongoose": "^9.1.5",
-    "morgan": "^1.10.1",
-    "cross-env": "^10.1.0"
+    "morgan": "^1.10.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
