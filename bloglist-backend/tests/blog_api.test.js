@@ -5,7 +5,9 @@ const supertest = require('supertest')
 const app = require('../app')
 const helper = require('./test_helper')
 const Blog = require('../models/blog')
-const { nonExistingId } = require('./test_helper')
+const { nonExistingId, usersInDb } = require('./test_helper')
+const User = require('../models/user')
+const bcrypt = require('bcrypt')
 
 const api = supertest(app)
 
@@ -14,6 +16,13 @@ describe('when there are initially some blogs saved', () => {
   beforeEach(async () => {
     await Blog.deleteMany({})
     await Blog.insertMany(helper.initialBlogs)
+
+    await User.deleteMany({})
+
+    const passwordHash = await bcrypt.hash('sekret', 10)
+    const user = new User({ username: 'root', passwordHash })
+
+    await user.save()
   })
 
   describe('viewing blogs', () => {
@@ -32,7 +41,6 @@ describe('when there are initially some blogs saved', () => {
       const response = await api.get('/api/blogs')
 
       const firstBlog = response.body[0]
-      console.log(firstBlog, 'id' in firstBlog, '_id' in firstBlog)
 
       assert('id' in firstBlog)
       assert(!('_id' in firstBlog))
@@ -101,6 +109,57 @@ describe('when there are initially some blogs saved', () => {
         .post('/api/blogs')
         .send(newBlog)
         .expect(400)
+    })
+
+    test('a new blog has ANY user as their creator/user ', async () => {
+      const newBlog = {
+        title: 'async/await simplifies making async calls',
+        url: 'ts.netzmal.de/blogs/async',
+        author: 'Torge Schöwing',
+        likes: 69
+      }
+
+      const result = await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+
+
+      const firstUser = (await helper.usersInDb())[0]
+      assert.strictEqual(firstUser.id, result.body.user)
+
+      const blogsAtEnd = await helper.blogsInDb()
+      assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length + 1)
+
+      const titles = blogsAtEnd.map(n => n.title)
+      assert(titles.includes('async/await simplifies making async calls'))
+    })
+
+    test('...and shows up on the user ', async () => {
+      const newBlog = {
+        title: 'async/await simplifies making async calls',
+        url: 'ts.netzmal.de/blogs/async',
+        author: 'Torge Schöwing',
+        likes: 69
+      }
+
+      const result = await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+
+
+      const firstUser = (await helper.usersInDb())[0]
+
+      assert.strictEqual(firstUser.blogs.find(b => result.body.id === b.toString()) !== undefined, true)
+
+      const blogsAtEnd = await helper.blogsInDb()
+      assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length + 1)
+
+      const titles = blogsAtEnd.map(n => n.title)
+      assert(titles.includes('async/await simplifies making async calls'))
     })
   })
 
