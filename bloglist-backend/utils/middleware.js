@@ -27,6 +27,10 @@ const errorHandler = (error, request, response, next) => {
     return response.status(401).json({
       error: 'token expired'
     })
+  } else if (error.message === 'Password must be at least 3 characters') {
+    return response.status(400).json({
+      error: 'password must be at least 3 characters'
+    })
   }
 
   next(error)
