@@ -8,6 +8,7 @@ const Blog = require('../models/blog')
 const { nonExistingId, usersInDb } = require('./test_helper')
 const User = require('../models/user')
 const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 
 const api = supertest(app)
 
@@ -49,6 +50,10 @@ describe('when there are initially some blogs saved', () => {
 
   describe('adding blogs', () => {
     test('a valid blog can be added ', async () => {
+
+      const loginResult = await api.post('/api/login').send({ username: 'root', password: 'sekret' }).expect(200)
+      const token = loginResult.body.token
+      assert(token)
       const newBlog = {
         title: 'async/await simplifies making async calls',
         url: 'ts.netzmal.de/blogs/async',
@@ -59,6 +64,7 @@ describe('when there are initially some blogs saved', () => {
       await api
         .post('/api/blogs')
         .send(newBlog)
+        .set('Authorization', `Bearer ${token}`)
         .expect(201)
         .expect('Content-Type', /application\/json/)
 
@@ -69,7 +75,28 @@ describe('when there are initially some blogs saved', () => {
       assert(titles.includes('async/await simplifies making async calls'))
     })
 
+    test('... and fails with 401 if no authorization is provided ', async () => {
+
+      const newBlog = {
+        title: 'async/await simplifies making async calls',
+        url: 'ts.netzmal.de/blogs/async',
+        author: 'Torge Schöwing',
+        likes: 69
+      }
+
+      await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(401)
+
+    })
+
     test('missing likes default to 0 ', async () => {
+
+      const loginResult = await api.post('/api/login').send({ username: 'root', password: 'sekret' }).expect(200)
+      const token = loginResult.body.token
+      assert(token)
+
       const newBlog = {
         title: 'async/await simplifies making async calls',
         url: 'ts.netzmal.de/blogs/async',
@@ -78,6 +105,7 @@ describe('when there are initially some blogs saved', () => {
 
       const result = await api
         .post('/api/blogs')
+        .set('Authorization', `Bearer ${token}`)
         .send(newBlog)
         .expect(201)
         .expect('Content-Type', /application\/json/)
@@ -88,6 +116,10 @@ describe('when there are initially some blogs saved', () => {
     })
 
     test('missing title returns 400 ', async () => {
+      const loginResult = await api.post('/api/login').send({ username: 'root', password: 'sekret' }).expect(200)
+      const token = loginResult.body.token
+      assert(token)
+
       const newBlog = {
         url: 'ts.netzmal.de/blogs/async',
         author: 'Torge Schöwing',
@@ -95,11 +127,16 @@ describe('when there are initially some blogs saved', () => {
 
       await api
         .post('/api/blogs')
+        .set('Authorization', `Bearer ${token}`)
         .send(newBlog)
         .expect(400)
     })
 
     test('missing url returns 400 ', async () => {
+      const loginResult = await api.post('/api/login').send({ username: 'root', password: 'sekret' }).expect(200)
+      const token = loginResult.body.token
+      assert(token)
+
       const newBlog = {
         title: 'async/await simplifies making async calls',
         author: 'Torge Schöwing',
@@ -107,11 +144,17 @@ describe('when there are initially some blogs saved', () => {
 
       await api
         .post('/api/blogs')
+        .set('Authorization', `Bearer ${token}`)
         .send(newBlog)
         .expect(400)
     })
 
-    test('a new blog has ANY user as their creator/user ', async () => {
+    test('a new blog has the logged in user as their creator/user ', async () => {
+      const loginResult = await api.post('/api/login').send({ username: 'root', password: 'sekret' }).expect(200)
+      const { token } = loginResult.body
+      const id = jwt.verify(token, process.env.SECRET).id
+      assert(token)
+
       const newBlog = {
         title: 'async/await simplifies making async calls',
         url: 'ts.netzmal.de/blogs/async',
@@ -121,13 +164,13 @@ describe('when there are initially some blogs saved', () => {
 
       const result = await api
         .post('/api/blogs')
+        .set('Authorization', `Bearer ${token}`)
         .send(newBlog)
         .expect(201)
         .expect('Content-Type', /application\/json/)
 
 
-      const firstUser = (await helper.usersInDb())[0]
-      assert.strictEqual(firstUser.id, result.body.user)
+      assert.strictEqual(id, result.body.user)
 
       const blogsAtEnd = await helper.blogsInDb()
       assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length + 1)
@@ -137,6 +180,10 @@ describe('when there are initially some blogs saved', () => {
     })
 
     test('...and shows up on the user ', async () => {
+      const loginResult = await api.post('/api/login').send({ username: 'root', password: 'sekret' }).expect(200)
+      const { token } = loginResult.body
+      const id = jwt.verify(token, process.env.SECRET).id
+      assert(token)
       const newBlog = {
         title: 'async/await simplifies making async calls',
         url: 'ts.netzmal.de/blogs/async',
@@ -146,14 +193,16 @@ describe('when there are initially some blogs saved', () => {
 
       const result = await api
         .post('/api/blogs')
+        .set('Authorization', `Bearer ${token}`)
         .send(newBlog)
         .expect(201)
         .expect('Content-Type', /application\/json/)
 
 
-      const firstUser = (await helper.usersInDb())[0]
+      const user = (await helper.usersInDb()).find(u => u.id === id)
+      assert(user)
 
-      assert.strictEqual(firstUser.blogs.find(b => result.body.id === b.toString()) !== undefined, true)
+      assert.strictEqual(user.blogs.find(b => result.body.id === b.toString()) !== undefined, true)
 
       const blogsAtEnd = await helper.blogsInDb()
       assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length + 1)
@@ -165,17 +214,34 @@ describe('when there are initially some blogs saved', () => {
 
   describe('deleting blogs', () => {
     test('succeeds with status code 204 if id is valid', async () => {
-      const blogsAtStart = await helper.blogsInDb()
-      const blogToDelete = blogsAtStart[0]
+      const loginResult = await api.post('/api/login').send({ username: 'root', password: 'sekret' }).expect(200)
+      const { token } = loginResult.body
+      assert(token)
+      const newBlog = {
+        title: 'async/await simplifies making async calls',
+        url: 'ts.netzmal.de/blogs/async',
+        author: 'Torge Schöwing',
+        likes: 69
+      }
 
-      await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204)
+      const result = await api
+        .post('/api/blogs')
+        .set('Authorization', `Bearer ${token}`)
+        .send(newBlog)
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+      const blogToDelete = result.body
+
+      await api.delete(`/api/blogs/${blogToDelete.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(204)
 
       const blogsAtEnd = await helper.blogsInDb()
 
       const ids = blogsAtEnd.map(n => n.id)
       assert(!ids.includes(blogToDelete.id))
 
-      assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length - 1)
+      assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length)
     })
 
   })

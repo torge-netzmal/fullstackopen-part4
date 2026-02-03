@@ -1,14 +1,11 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
-const User = require('../models/user')
+const middleware = require('../utils/middleware')
 
 
-blogsRouter.post('/', async (request, response) => {
-  const user = await User.findOne({})
+blogsRouter.post('/', middleware.userExtractor, async (request, response) => {
 
-  if (!user) {
-    return response.status(400).json({ error: 'userId missing or not valid' })
-  }
+  const user = request.user
 
   const blog = new Blog({ ...request.body, user: user._id })
   const result = await blog.save()
@@ -31,14 +28,30 @@ blogsRouter.put('/:id', async (request, response) => {
   if (!blog) {
     return response.status(404).end()
   }
-
   blog.likes = likes
   const updatedBlog = await blog.save()
   return response.json(updatedBlog)
+
+
 })
 
-blogsRouter.delete('/:id', async (request, response) => {
-  await Blog.findByIdAndDelete(request.params.id)
+blogsRouter.delete('/:id', middleware.userExtractor, async (request, response) => {
+
+  const user = request.user
+  const blog = await Blog.findById(request.params.id)
+  if (!blog) {
+    return response.status(404).end()
+  }
+
+  if (blog.user.toString() === user._id.toString()) {
+    await Blog.findByIdAndDelete(request.params.id)
+    user.blogs = user.blogs.filter(b => b.toString() !== request.params.id)
+    await user.save()
+  } else {
+    response.status(401).json({ error: 'Unauthorized' })
+  }
+
+
   response.status(204).end()
 })
 
